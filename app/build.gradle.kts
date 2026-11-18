@@ -18,14 +18,8 @@ android {
 
     buildTypes {
         debug {
-            // short default timings for testing: 30 s of scrolling per 2 min session
-            buildConfigField("long", "BUDGET_MS", "30_000L")
-            buildConfigField("long", "WINDOW_MS", "120_000L")
         }
         release {
-            // default: 10 min of scrolling per 1 hour session (changeable in the app)
-            buildConfigField("long", "BUDGET_MS", "600_000L")
-            buildConfigField("long", "WINDOW_MS", "3_600_000L")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))

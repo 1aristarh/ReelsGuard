@@ -6,6 +6,7 @@ import android.content.Context
 object Store {
     private const val P = "s"
     private var timer: CooldownTimer? = null
+    private var setupLock: SetupLock? = null
 
     /** Last Reels/Shorts surface the service detected, shown in the app so detection can be checked. */
     @Volatile var lastHit: String? = null
@@ -15,15 +16,52 @@ object Store {
         timer ?: load(c.applicationContext).also { timer = it }
     }
 
+    fun lock(c: Context): SetupLock = setupLock ?: synchronized(this) {
+        setupLock ?: loadLock(c.applicationContext).also { setupLock = it }
+    }
+
+    /** The limits currently in force. */
+    fun config(t: CooldownTimer) = Config(t.blockAll, (t.budgetMs / 60_000L).toInt(), (t.windowMs / 60_000L).toInt(), t.maxPasses, (t.passMs / 60_000L).toInt())
+
+    fun applyConfig(t: CooldownTimer, c: Config) {
+        t.blockAll = c.blockAll
+        t.budgetMs = c.budgetMin * 60_000L
+        t.windowMs = c.windowMin * 60_000L
+        t.maxPasses = c.passes
+        t.passMs = c.passMin * 60_000L
+    }
+
+    private fun loadLock(c: Context): SetupLock {
+        val p = c.getSharedPreferences(P, Context.MODE_PRIVATE)
+        val pending = if (p.getBoolean("hasPending", false)) Config(
+            p.getBoolean("pBlock", false), p.getInt("pBudget", 10), p.getInt("pWindow", 60), p.getInt("pPasses", 3), p.getInt("pPassLen", 2),
+        ) else null
+        return SetupLock(
+            approved = p.getBoolean("approved", false), lockedAt = p.getLong("lockedAt", 0L),
+            lockDays = p.getInt("lockDays", 7), pending = pending, pendingAt = p.getLong("pendingAt", 0L),
+        )
+    }
+
+    fun saveLock(c: Context, l: SetupLock) {
+        val e = c.getSharedPreferences(P, Context.MODE_PRIVATE).edit()
+            .putBoolean("approved", l.approved).putLong("lockedAt", l.lockedAt)
+            .putInt("lockDays", l.lockDays).putLong("pendingAt", l.pendingAt)
+        val pc = l.pending
+        e.putBoolean("hasPending", pc != null)
+        if (pc != null) e.putBoolean("pBlock", pc.blockAll).putInt("pBudget", pc.budgetMin)
+            .putInt("pWindow", pc.windowMin).putInt("pPasses", pc.passes).putInt("pPassLen", pc.passMin)
+        e.apply()
+    }
+
     private fun load(c: Context): CooldownTimer {
         val p = c.getSharedPreferences(P, Context.MODE_PRIVATE)
         return CooldownTimer(
-            budgetMs = p.getLong("budgetMs", BuildConfig.BUDGET_MS),
+            budgetMs = p.getLong("budgetMs", Config.DEFAULT.budgetMin * 60_000L),
             cooldownMs = 0L, // cooldown lasts until the session window ends
-            windowMs = p.getLong("windowMs", BuildConfig.WINDOW_MS),
+            windowMs = p.getLong("windowMs", Config.DEFAULT.windowMin * 60_000L),
             blockAll = p.getBoolean("blockAll", false),
-            maxPasses = p.getInt("maxPasses", CooldownTimer.MAX_PASSES),
-            passMs = p.getLong("passMs", CooldownTimer.PASS_MS),
+            maxPasses = p.getInt("maxPasses", Config.DEFAULT.passes),
+            passMs = p.getLong("passMs", Config.DEFAULT.passMin * 60_000L),
             usedMs = p.getLong("used", 0L), cooldownUntil = p.getLong("until", 0L),
             passUntil = p.getLong("passUntil", 0L), passDay = p.getLong("passDay", -1L),
             passesUsed = p.getInt("passesUsed", 0),

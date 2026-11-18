@@ -1,0 +1,521 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ReelsGuard setup mockup</title>
+<style>
+  :root {
+    --bg: #000; --card: #161616; --card2: #1f1f1f; --muted: #8c8c8c; --grey: #b0b0b0;
+    --white: #fff; --red: #e5252a; --line: #2a2a2a; --ok: #3ecf6e; --amber: #ffb02e;
+  }
+  * { box-sizing: border-box; margin: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    background: #0b0b0d; color: var(--white); min-height: 100vh;
+    font: 15px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start; justify-content: center;
+    padding: 32px 16px;
+  }
+  .phone {
+    width: 360px; height: 740px; background: var(--bg); border-radius: 40px;
+    border: 10px solid #1c1c20; box-shadow: 0 30px 80px rgba(0,0,0,.6);
+    display: flex; flex-direction: column; overflow: hidden; position: relative;
+  }
+  .status { height: 28px; flex: none; display: flex; justify-content: space-between; padding: 8px 22px 0; font-size: 12px; color: var(--grey); }
+  .brand { text-align: center; font-size: 13px; font-weight: 700; letter-spacing: .25em; color: var(--muted); padding: 10px 0 4px; flex: none; }
+  .dots { display: flex; gap: 6px; justify-content: center; padding: 8px 0 4px; flex: none; min-height: 22px; }
+  .dots i { width: 22px; height: 4px; border-radius: 2px; background: var(--line); transition: background .2s; }
+  .dots i.on { background: var(--white); }
+  .dots i.done { background: var(--red); }
+  .screen { flex: 1; overflow-y: auto; padding: 14px 22px 8px; display: flex; flex-direction: column; }
+  .screen::-webkit-scrollbar { display: none; }
+  h1 { font-size: 26px; line-height: 1.15; margin: 8px 0 6px; }
+  .sub { color: var(--muted); font-size: 14px; margin-bottom: 18px; }
+  .spacer { flex: 1; min-height: 8px; }
+
+  .opt {
+    display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
+    background: var(--card); border: 1.5px solid transparent; border-radius: 18px;
+    padding: 14px 16px; margin-bottom: 10px; color: inherit; font: inherit; cursor: pointer;
+  }
+  .opt:hover { background: var(--card2); }
+  .opt.sel { border-color: var(--white); }
+  .opt b { display: block; font-size: 16px; }
+  .opt span.d { color: var(--muted); font-size: 13px; }
+  .radio { width: 20px; height: 20px; border-radius: 50%; border: 2px solid #555; flex: none; position: relative; }
+  .opt.sel .radio { border-color: var(--white); }
+  .opt.sel .radio::after { content: ""; position: absolute; inset: 3px; border-radius: 50%; background: var(--white); }
+
+  .label { font-size: 11px; letter-spacing: .15em; color: var(--muted); font-weight: 700; margin: 14px 0 8px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    background: var(--card); border: 1.5px solid transparent; color: var(--white);
+    border-radius: 999px; padding: 10px 16px; font: inherit; font-size: 14px; cursor: pointer;
+  }
+  .chip.sel { background: var(--white); color: #000; font-weight: 700; }
+  .chip:hover:not(.sel):not([disabled]) { background: var(--card2); }
+  .chip[disabled] { opacity: .35; cursor: not-allowed; }
+
+  /* tappable setting rows that open the throttle popup */
+  .srow {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%;
+    background: var(--card); border: 0; border-radius: 16px; padding: 14px 16px; margin-bottom: 8px;
+    color: inherit; font: inherit; font-size: 14px; cursor: pointer; text-align: left;
+  }
+  .srow:hover { background: var(--card2); }
+  .srow span { color: var(--muted); }
+  .srow b { display: flex; align-items: center; gap: 8px; font-size: 15px; }
+  .srow b::after { content: "›"; color: #666; font-size: 20px; line-height: 1; }
+  .srow.capped b::before { content: "🔒"; font-size: 11px; }
+
+  .live { background: var(--card); border-radius: 18px; padding: 14px 16px; margin-top: 16px; color: var(--grey); font-size: 14px; }
+  .live b { color: var(--white); }
+
+  .btns { flex: none; padding: 10px 22px 22px; display: flex; gap: 10px; }
+  .btn { flex: 1; border: 0; border-radius: 28px; padding: 16px; font: inherit; font-weight: 700; font-size: 16px; background: var(--red); color: #fff; cursor: pointer; }
+  .btn.ghost { flex: 0 0 auto; background: var(--card); color: var(--grey); padding: 16px 22px; }
+  .btn:disabled { background: #2e2e2e; color: #777; cursor: not-allowed; }
+
+  .perm { display: flex; gap: 14px; align-items: center; background: var(--card); border-radius: 18px; padding: 16px; margin-bottom: 10px; }
+  .perm .ic { width: 38px; height: 38px; border-radius: 12px; background: var(--card2); display: grid; place-items: center; font-size: 18px; flex: none; }
+  .perm .t { flex: 1; font-size: 14px; color: var(--grey); }
+  .perm .t b { color: var(--white); display: block; font-size: 15px; }
+  .pill { font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 999px; border: 0; cursor: pointer; background: var(--white); color: #000; }
+  .pill.ok { background: transparent; color: var(--ok); cursor: default; }
+
+  .sum { background: var(--card); border-radius: 20px; padding: 6px 16px; }
+  .row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--line); font-size: 14px; gap: 10px; }
+  .row:last-child { border-bottom: 0; }
+  .row span:first-child { color: var(--muted); }
+  .row b { text-align: right; }
+  .row.diff b { color: var(--white); }
+  .row.diff .arrow { color: var(--red); }
+  .warn { color: var(--grey); font-size: 13px; margin: 14px 2px 0; }
+  .warn b { color: var(--white); }
+
+  .hold { position: relative; overflow: hidden; flex: 1; border: 0; border-radius: 28px; padding: 18px; background: #3a0f10; color: #fff; font: inherit; font-weight: 700; font-size: 16px; cursor: pointer; user-select: none; touch-action: none; }
+  .hold .fill { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--red); }
+  .hold span { position: relative; }
+
+  .center { text-align: center; }
+  .ring { width: 190px; height: 190px; margin: 6px auto 14px; position: relative; }
+  .ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .ring .in { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
+  .ring .in b { font-size: 38px; }
+  .ring .in small { color: var(--muted); letter-spacing: .15em; font-size: 11px; font-weight: 700; }
+  .lockcard { background: var(--card); border-radius: 20px; padding: 6px 16px; margin-top: 12px; }
+  .todaycard { background: var(--card); border-radius: 20px; padding: 16px; text-align: center; margin-top: 18px; }
+  .todaycard small { color: var(--muted); font-size: 11px; letter-spacing: .15em; font-weight: 700; }
+  .todaycard b { display: block; font-size: 26px; margin-top: 2px; }
+  .link { color: var(--muted); text-align: center; font-size: 12px; margin-top: 14px; text-decoration: underline; cursor: pointer; background: none; border: 0; font-family: inherit; width: 100%; }
+
+  .gear { position: absolute; top: 34px; right: 16px; width: 36px; height: 36px; border-radius: 50%; border: 0; background: var(--card); color: var(--grey); font-size: 18px; cursor: pointer; display: none; place-items: center; z-index: 2; }
+  .gear.show { display: grid; }
+  .gear:hover { background: var(--card2); }
+  .topbar { display: flex; align-items: center; gap: 10px; margin: 4px 0 14px; }
+  .topbar button { width: 36px; height: 36px; border-radius: 50%; border: 0; background: var(--card); color: var(--white); font-size: 18px; cursor: pointer; }
+  .topbar h1 { margin: 0; font-size: 22px; }
+  .banner { display: flex; gap: 12px; align-items: center; background: #2a1011; border: 1px solid #5a1a1c; border-radius: 16px; padding: 12px 14px; margin-bottom: 14px; font-size: 13px; color: var(--grey); }
+  .banner b { color: var(--white); display: block; font-size: 14px; }
+  .banner.ok { background: #0f2a17; border-color: #1d5a31; }
+  .banner.wait { background: #2a2410; border-color: #5a4a1a; }
+  .mini { width: 100%; border: 0; border-radius: 22px; padding: 12px; background: var(--card); color: var(--grey); font: inherit; font-size: 14px; cursor: pointer; margin-top: 10px; }
+
+  /* ---------- throttle popup ---------- */
+  .sheet { position: absolute; inset: 0; z-index: 10; display: none; }
+  .sheet.open { display: block; }
+  .sheet .shade { position: absolute; inset: 0; background: rgba(0,0,0,.65); opacity: 0; transition: opacity .25s; }
+  .sheet .panel {
+    position: absolute; left: 0; right: 0; bottom: 0; transform: translateY(100%); transition: transform .3s cubic-bezier(.2,.8,.2,1);
+    background: linear-gradient(#17181b, #0c0c0e); border-radius: 28px 28px 0 0; border-top: 1px solid #2c2d31;
+    padding: 12px 22px 22px; box-shadow: 0 -20px 60px rgba(0,0,0,.7);
+  }
+  .sheet.show .shade { opacity: 1; }
+  .sheet.show .panel { transform: none; }
+  .grab { width: 40px; height: 4px; border-radius: 2px; background: #3a3a3f; margin: 0 auto 12px; }
+  .sh-title { text-align: center; font-size: 11px; letter-spacing: .2em; color: var(--muted); font-weight: 700; }
+  .readout { text-align: center; font-size: 44px; font-weight: 800; letter-spacing: -.5px; margin: 2px 0 0; font-variant-numeric: tabular-nums; }
+  .readsub { text-align: center; font-size: 12.5px; color: var(--muted); min-height: 34px; padding: 0 6px; }
+  .readsub.bad { color: #ff6b6b; }
+
+  .throttle { --cx: 48%; position: relative; height: 270px; margin: 6px 0 14px; user-select: none; touch-action: none; }
+  .slot {
+    position: absolute; left: var(--cx); top: 0; bottom: 0; width: 30px; transform: translateX(-50%); border-radius: 15px;
+    background: linear-gradient(90deg, #020202, #0b0b0c 50%, #020202);
+    box-shadow: inset 0 4px 10px #000, 0 0 0 2px #2b2c30, 0 0 0 6px #111214, 0 0 0 7px #26272b;
+    overflow: hidden;
+  }
+  .thrust {
+    position: absolute; left: 10px; right: 10px; bottom: 0; border-radius: 5px;
+    background: linear-gradient(to top, #ff2a1a, #ff7a1f 60%, #ffc52e);
+    box-shadow: 0 0 14px 2px rgba(255,96,31,.65);
+  }
+  .barrier {
+    position: absolute; left: 0; right: 0; top: 0; display: none;
+    background: repeating-linear-gradient(135deg, #5a1a1c 0 7px, #240a0b 7px 14px);
+    border-bottom: 2px solid var(--red);
+  }
+  .barrier.on { display: block; }
+  .barrier.hit { animation: hit .3s; }
+  @keyframes hit { 0%,100% { filter: none; } 30% { filter: brightness(2.2); } }
+  .tick { position: absolute; right: calc(100% - var(--cx) + 46px); transform: translateY(-50%); font-size: 11px; color: #6c6c72; font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; }
+  .tick::after { content: ""; position: absolute; left: calc(100% + 6px); top: 50%; width: 10px; height: 1.5px; background: #3a3b40; }
+  .tick.hot { color: var(--white); font-weight: 700; }
+  .tick.hot::after { background: var(--amber); }
+  .tickL { position: absolute; left: calc(var(--cx) + 30px); transform: translateY(-50%); width: 10px; height: 1.5px; background: #2d2e32; }
+  .tickL.hot { background: var(--amber); }
+  .mark { position: absolute; right: 0; transform: translateY(-50%); font-size: 10px; letter-spacing: .12em; color: #55565c; font-weight: 700; }
+
+  .handle {
+    position: absolute; left: var(--cx); width: 56px; height: 32px; margin-left: -28px; cursor: grab; touch-action: none;
+    border-radius: 9px 9px 7px 7px;
+    background:
+      linear-gradient(to bottom, rgba(255,255,255,.22), rgba(255,255,255,0) 18%, rgba(0,0,0,.35) 100%),
+      linear-gradient(90deg, #26282d, #4d5059 18%, #7b7f8a 36%, #3f424a 55%, #5b5f69 78%, #1f2125);
+    border: 1px solid #0a0a0b;
+    box-shadow: 0 10px 18px rgba(0,0,0,.65), inset 0 1px 0 rgba(255,255,255,.35), inset 0 -3px 5px rgba(0,0,0,.5);
+    transition: box-shadow .15s;
+  }
+  .handle::before { /* knurled grip */
+    content: ""; position: absolute; left: 6px; right: 6px; top: 9px; bottom: 6px; border-radius: 4px;
+    background: repeating-linear-gradient(to bottom, #0d0e10 0 1.6px, #5a5d66 1.6px 2.6px, #1b1c20 2.6px 4px);
+    box-shadow: inset 0 2px 4px rgba(0,0,0,.8), 0 1px 0 rgba(255,255,255,.18);
+  }
+  .handle::after { /* red cap */
+    content: ""; position: absolute; left: 0; right: 0; top: 0; height: 6px; border-radius: 9px 9px 0 0;
+    background: linear-gradient(#ff5a4a, #c4191f); box-shadow: 0 1px 0 rgba(0,0,0,.6);
+  }
+  .handle.blocked { animation: shake .25s; }
+  @keyframes shake { 0%,100% { margin-left: -28px; } 25% { margin-left: -32px; } 75% { margin-left: -24px; } }
+
+  .sh-btns { display: flex; gap: 10px; }
+
+  .notes { max-width: 380px; color: var(--grey); font-size: 14px; }
+  .notes h2 { font-size: 18px; color: var(--white); margin-bottom: 10px; }
+  .notes ul { padding-left: 18px; }
+  .notes li { margin-bottom: 8px; }
+  .notes b { color: var(--white); }
+  .demo { margin-top: 18px; }
+  .demo h3 { font-size: 13px; letter-spacing: .12em; color: var(--muted); margin-bottom: 8px; }
+  .demo button { display: block; width: 100%; text-align: left; background: var(--card); color: var(--white); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; font: inherit; font-size: 14px; cursor: pointer; }
+  .demo button:hover { background: var(--card2); }
+  .demo button span { display: block; color: var(--muted); font-size: 12px; }
+  @media (max-width: 420px) { .phone { width: 100%; max-width: 360px; } }
+</style>
+</head>
+<body>
+
+<div class="phone" id="phone">
+  <div class="status"><span>9:41</span><span>5G ▮▮▮</span></div>
+  <div class="brand">REELSGUARD</div>
+  <button class="gear" id="gear" title="Settings" aria-label="Settings">⚙</button>
+  <div class="dots" id="dots"></div>
+  <div class="screen" id="screen"></div>
+  <div class="btns" id="btns"></div>
+
+  <div class="sheet" id="sheet">
+    <div class="shade" id="shade"></div>
+    <div class="panel">
+      <div class="grab"></div>
+      <div class="sh-title" id="shTitle"></div>
+      <div class="readout" id="shRead"></div>
+      <div class="readsub" id="shSub"></div>
+      <div class="throttle" id="throttle">
+        <div class="slot" id="slot"><div class="barrier" id="barrier"></div><div class="thrust" id="thrust"></div></div>
+        <div class="handle" id="handle"></div>
+      </div>
+      <div class="sh-btns">
+        <button class="btn ghost" id="shCancel">Cancel</button>
+        <button class="btn" id="shSet">Set</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<aside class="notes">
+  <h2>Design notes</h2>
+  <ul>
+    <li><b>Flow:</b> Mode → Limits → Passes → Permission → Review &amp; lock. Block mode skips Limits and Passes. The guard does nothing until the last step is approved.</li>
+    <li><b>Throttle popup:</b> every number (scrolling, session length up to 24 h, passes, pass length, lock period) is set with the same pop-up throttle lever. Drag the handle, it clicks into detents. Push up for more.</li>
+    <li><b>Locked:</b> the lever can't go above the current setting. The hatched barrier marks the blocked zone and the handle bumps against it. In the settings you can still pull it down (stricter).</li>
+    <li><b>Lock:</b> approval is a deliberate <b>press and hold</b>, plus a lock period you pick. The main screen shows only the timer; settings sit behind the gear in the top right corner.</li>
+    <li><b>Editing:</b> while locked you can only go stricter (applies instantly). After the lock ends, going up is a request with a 24 h wait, then a review and hold-to-apply. Use the buttons below to see each state.</li>
+    <li><b>Known gap:</b> a lock stored in app data can be cleared by uninstalling or "Clear data". Hardening ideas: warn on the first launch after a reinstall, and gate on the accessibility service being on.</li>
+    <li><b>Mockup only:</b> nothing here is wired to the app. "Restart mockup" on the main screen starts over.</li>
+  </ul>
+  <div class="demo">
+    <h3>JUMP TO SETTINGS STATE</h3>
+    <button data-jump="locked">Locked<span>Day 2 of the lock: lever can't go up, only down</span></button>
+    <button data-jump="unlocked">Unlocked<span>Lock ended: lever moves freely, going up needs a 24 h wait</span></button>
+    <button data-jump="pending">Change pending<span>Request made, old limits still enforced</span></button>
+    <button data-jump="ready">Ready to apply<span>Wait is over: review and hold to apply</span></button>
+  </div>
+</aside>
+
+<script>
+const DEFAULTS = { phase: 'locked', pending: null, flash: '', view: 'main', step: 0, mode: 'sessions', budget: 10, window: 60, passes: 3, passLen: 2, perm: false, lockDays: 7, locked: false, lockedAt: 0 };
+const S = { ...DEFAULTS };
+const $ = id => document.getElementById(id);
+const fmtMin = m => m >= 60 && m % 60 === 0 ? (m / 60) + ' h' : m + ' min';
+
+// every number setting: its allowed stops and how to show it
+const FIELDS = {
+  budget:   { label: 'Scrolling per session', stops: [5, 10, 15, 20, 30, 45, 60], fmt: fmtMin },
+  window:   { label: 'Session length', stops: [30, 60, 120, 180, 240, 360, 480, 720, 960, 1200, 1440], fmt: fmtMin },
+  passes:   { label: '"I need to see something"', stops: [0, 1, 2, 3, 4, 5, 6, 8, 10], fmt: v => v === 0 ? 'None' : v + ' per day' },
+  passLen:  { label: 'Length of each pass', stops: [1, 2, 3, 5, 10], fmt: fmtMin },
+  lockDays: { label: 'Lock settings for', stops: [1, 3, 7, 14, 30], fmt: v => v + (v === 1 ? ' day' : ' days') },
+};
+const MODE_FMT = v => v === 'block' ? 'Block completely' : 'Sessions';
+const steps = () => S.mode === 'block' ? ['mode', 'perm', 'review'] : ['mode', 'limits', 'passes', 'perm', 'review'];
+const dateStr = t => new Date(t).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+const until = () => dateStr(S.lockedAt + S.lockDays * 864e5);
+const untilNew = () => dateStr(Date.now() + S.lockDays * 864e5);
+const rows = r => r.map(([a, b]) => `<div class="row"><span>${a}</span><b>${b}</b></div>`).join('');
+function summaryRows() {
+  const r = [['Mode', MODE_FMT(S.mode)]];
+  if (S.mode === 'sessions') r.push(['Scrolling per session', fmtMin(S.budget)], ['Session length', fmtMin(S.window)], ['"I need to see something"', S.passes === 0 ? 'Off' : S.passes + ' per day × ' + fmtMin(S.passLen)]);
+  return r;
+}
+function srow(k, target, capped) {
+  const f = FIELDS[k];
+  return `<button class="srow ${capped ? 'capped' : ''}" data-open="${k}"><span>${f.label}</span><b>${f.fmt(target[k])}</b></button>`;
+}
+function opt(v, title, desc) {
+  return `<button class="opt ${S.mode === v ? 'sel' : ''}" data-mode="${v}"><i class="radio"></i><div><b>${title}</b><span class="d">${desc}</span></div></button>`;
+}
+
+/* ---------------- throttle popup ---------------- */
+const T = { k: null, idx: 0, limit: null, onSet: null, H: 270, HH: 32, drag: false };
+const stopsOf = k => FIELDS[k].stops;
+const nearest = (stops, v) => stops.reduce((b, s, i) => Math.abs(s - v) < Math.abs(stops[b] - v) ? i : b, 0);
+const centerY = i => T.HH / 2 + (1 - i / (stopsOf(T.k).length - 1)) * (T.H - T.HH);
+
+function openSheet(k, target, capped, onSet) {
+  const stops = stopsOf(k);
+  T.k = k; T.onSet = onSet;
+  T.idx = nearest(stops, target[k]);
+  // capped: the lever can't go above the value currently in force
+  T.limit = capped ? stops.reduce((b, s, i) => s <= S[k] ? i : b, 0) : null;
+  $('shTitle').textContent = FIELDS[k].label.toUpperCase();
+  const th = $('throttle');
+  th.querySelectorAll('.tick, .tickL, .mark').forEach(n => n.remove());
+  stops.forEach((s, i) => {
+    const t = document.createElement('div'); t.className = 'tick'; t.dataset.i = i; t.style.top = centerY(i) + 'px'; t.textContent = FIELDS[k].fmt(s); th.appendChild(t);
+    const l = document.createElement('div'); l.className = 'tickL'; l.dataset.i = i; l.style.top = centerY(i) + 'px'; th.appendChild(l);
+  });
+  const mx = document.createElement('div'); mx.className = 'mark'; mx.style.top = (T.HH / 2) + 'px'; mx.textContent = 'MORE'; th.appendChild(mx);
+  const mn = document.createElement('div'); mn.className = 'mark'; mn.style.top = (T.H - T.HH / 2) + 'px'; mn.textContent = 'LESS'; th.appendChild(mn);
+  const bar = $('barrier');
+  if (T.limit !== null && T.limit < stops.length - 1) {
+    bar.classList.add('on');
+    bar.style.height = Math.max(0, centerY(T.limit) - T.HH / 2 + 6) + 'px'; // slot top down to just above the limit stop's handle edge
+  } else bar.classList.remove('on');
+  paint();
+  $('sheet').classList.add('open');
+  requestAnimationFrame(() => $('sheet').classList.add('show'));
+}
+function closeSheet() {
+  $('sheet').classList.remove('show');
+  setTimeout(() => $('sheet').classList.remove('open'), 300);
+}
+function paint() {
+  const stops = stopsOf(T.k), cy = centerY(T.idx);
+  $('handle').style.top = (cy - T.HH / 2) + 'px';
+  $('thrust').style.height = Math.max(0, T.H - cy - 6) + 'px';
+  $('shRead').textContent = FIELDS[T.k].fmt(stops[T.idx]);
+  document.querySelectorAll('#throttle .tick, #throttle .tickL').forEach(n => n.classList.toggle('hot', +n.dataset.i === T.idx));
+  const sub = $('shSub');
+  sub.classList.remove('bad');
+  if (T.limit !== null) sub.textContent = `Locked until ${until()}. Max ${FIELDS[T.k].fmt(stops[T.limit])}.`;
+  else if (S.locked && S.phase === 'unlocked') sub.textContent = 'Up needs a 24 h wait. Down applies now.';
+  else sub.textContent = 'Push up for more, pull down for less.';
+}
+function bump() {
+  const h = $('handle'), b = $('barrier'), sub = $('shSub');
+  h.classList.remove('blocked'); b.classList.remove('hit'); void h.offsetWidth;
+  h.classList.add('blocked'); b.classList.add('hit');
+  sub.classList.add('bad'); sub.textContent = `Locked until ${until()}. Can't go up.`;
+}
+function moveTo(clientY) {
+  const r = $('throttle').getBoundingClientRect();
+  const stops = stopsOf(T.k);
+  const pct = 1 - (clientY - r.top - T.HH / 2) / (T.H - T.HH);
+  let i = Math.round(Math.min(1, Math.max(0, pct)) * (stops.length - 1));
+  if (T.limit !== null && i > T.limit) { i = T.limit; T.idx = i; paint(); bump(); return; }
+  if (i !== T.idx) { T.idx = i; paint(); }
+}
+(function wire() {
+  const th = $('throttle');
+  th.addEventListener('pointerdown', e => { T.drag = true; th.setPointerCapture(e.pointerId); moveTo(e.clientY); });
+  th.addEventListener('pointermove', e => { if (T.drag) moveTo(e.clientY); });
+  ['pointerup', 'pointercancel'].forEach(ev => th.addEventListener(ev, () => { T.drag = false; }));
+  $('shCancel').onclick = closeSheet;
+  $('shade').onclick = closeSheet;
+  $('shSet').onclick = () => { T.onSet(stopsOf(T.k)[T.idx]); closeSheet(); };
+})();
+
+/* ---------------- setup flow ---------------- */
+function setVal(k, v) {   // keep the scrolling budget shorter than the session
+  S[k] = v;
+  const B = FIELDS.budget.stops, W = FIELDS.window.stops;
+  if (k === 'window' && S.budget >= S.window) S.budget = [...B].reverse().find(b => b < S.window) ?? B[0];
+  if (k === 'budget' && S.budget >= S.window) S.window = W.find(w => w > S.budget) ?? W[W.length - 1];
+}
+function render() {
+  const sc = $('screen'), bt = $('btns'), dots = $('dots');
+  $('gear').classList.toggle('show', S.locked && S.view === 'main');
+  $('gear').onclick = () => { S.view = 'settings'; render(); };
+  if (S.locked) { dots.innerHTML = ''; return S.view === 'settings' ? renderSettings(sc, bt) : renderLocked(sc, bt); }
+  const list = steps(), cur = list[S.step];
+  dots.innerHTML = list.map((_, i) => `<i class="${i < S.step ? 'done' : i === S.step ? 'on' : ''}"></i>`).join('');
+  let html = '', nextOk = true;
+
+  if (cur === 'mode') {
+    html = `<h1>How strict?</h1><p class="sub">Pick how ReelsGuard treats Reels, Shorts and TikTok.</p>
+      ${opt('sessions', 'Sessions', 'A scrolling budget per session, then blocked until the session ends.')}
+      ${opt('block', 'Block completely', 'Reels and Shorts close as soon as they open. No budget, no passes.')}`;
+  } else if (cur === 'limits') {
+    html = `<h1>Set your limits</h1><p class="sub">Tap a row to open the throttle.</p>
+      ${srow('budget', S)}${srow('window', S)}
+      <div class="live">That is <b>${fmtMin(S.budget)} of scrolling every ${fmtMin(S.window)}</b>. When it is used up you are blocked until the session ends.</div>`;
+  } else if (cur === 'passes') {
+    html = `<h1>Emergency passes</h1><p class="sub">"I need to see something": a short pass during a block, e.g. for a reel a friend sent.</p>
+      ${srow('passes', S)}${S.passes > 0 ? srow('passLen', S) : ''}
+      <div class="live">${S.passes === 0 ? 'No passes: a block is a block.' : `<b>${S.passes} pass${S.passes > 1 ? 'es' : ''} a day</b>, ${fmtMin(S.passLen)} each. Pass time still counts in your daily total.`}</div>`;
+  } else if (cur === 'perm') {
+    html = `<h1>Allow the guard</h1><p class="sub">ReelsGuard needs one permission to see when Reels or Shorts are open and to swipe out of them.</p>
+      <div class="perm"><div class="ic">♿</div><div class="t"><b>Accessibility service</b>Reads the open screen and performs the swipe or Back.</div>
+        <button class="pill ${S.perm ? 'ok' : ''}" id="perm">${S.perm ? '✓ On' : 'Enable'}</button></div>
+      <div class="live">Reads nothing outside Instagram, YouTube and TikTok. Nothing leaves your phone.</div>`;
+    nextOk = S.perm;
+  } else if (cur === 'review') {
+    html = `<h1>Review &amp; lock</h1><p class="sub">Once you approve, these settings are locked and the guard starts.</p>
+      <div class="sum">${rows(summaryRows())}</div>
+      <div style="height:10px"></div>${srow('lockDays', S)}
+      <p class="warn">Until <b>${untilNew()}</b> you can't raise any limit. Be sure.</p>`;
+  }
+  sc.innerHTML = html;
+
+  if (cur === 'review') {
+    bt.innerHTML = `<button class="btn ghost" id="back">Back</button>${holdBtn('Hold to approve &amp; lock')}`;
+    $('back').onclick = () => { S.step--; render(); };
+    bindHold(() => { S.locked = true; S.phase = 'locked'; S.view = 'main'; S.lockedAt = Date.now(); render(); });
+  } else {
+    bt.innerHTML = (S.step > 0 ? '<button class="btn ghost" id="back">Back</button>' : '') + `<button class="btn" id="next" ${nextOk ? '' : 'disabled'}>Continue</button>`;
+    if (S.step > 0) $('back').onclick = () => { S.step--; render(); };
+    $('next').onclick = () => { S.step++; render(); };
+  }
+  sc.querySelectorAll('[data-mode]').forEach(el => el.onclick = () => { S.mode = el.dataset.mode; if (S.step >= steps().length) S.step = steps().length - 1; render(); });
+  sc.querySelectorAll('[data-open]').forEach(el => el.onclick = () => openSheet(el.dataset.open, S, false, v => { setVal(el.dataset.open, v); render(); }));
+  if ($('perm')) $('perm').onclick = () => { S.perm = true; render(); };
+}
+
+function holdBtn(label) { return `<button class="hold" id="hold"><i class="fill" id="fill"></i><span>${label}</span></button>`; }
+function bindHold(onDone) {
+  const b = $('hold'), f = $('fill'); let raf, t0;
+  const stop = () => { cancelAnimationFrame(raf); f.style.width = '0'; t0 = 0; };
+  const loop = ts => {
+    t0 = t0 || ts;
+    const p = Math.min((ts - t0) / 1500, 1);
+    f.style.width = (p * 100) + '%';
+    if (p >= 1) { onDone(); return; }
+    raf = requestAnimationFrame(loop);
+  };
+  b.addEventListener('pointerdown', e => { e.preventDefault(); t0 = 0; raf = requestAnimationFrame(loop); });
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => b.addEventListener(ev, stop));
+}
+
+function renderLocked(sc, bt) {
+  const C = 2 * Math.PI * 80;
+  const big = S.mode === 'block' ? 'BLOCKED' : fmtMin(S.budget).replace(' min', ':00');
+  const small = S.mode === 'block' ? 'REELS OFF' : 'TIME LEFT';
+  sc.innerHTML = `
+    <div class="center">
+      <div class="ring"><svg viewBox="0 0 190 190"><circle cx="95" cy="95" r="80" fill="none" stroke="#242424" stroke-width="14"/>
+        <circle cx="95" cy="95" r="80" fill="none" stroke="${S.mode === 'block' ? '#e5252a' : '#fff'}" stroke-width="14" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="0"/></svg>
+        <div class="in"><b style="${S.mode === 'block' ? 'font-size:28px' : ''}">${big}</b><small>${small}</small></div></div>
+      <div style="color:var(--ok);font-weight:700;font-size:14px">● Guard is on</div>
+      <div style="color:var(--muted);font-size:13px;margin-top:2px">Setup approved. Locked until ${until()}</div>
+    </div>
+    <div class="todaycard"><small>TODAY ON REELS</small><b>0m 00s</b></div>
+    <div class="spacer"></div>
+    <button class="link" id="restart">Restart mockup</button>`;
+  bt.innerHTML = '';
+  $('restart').onclick = () => { Object.assign(S, DEFAULTS); D = null; render(); };
+}
+
+/* ---------------- settings (locked / unlocked / pending / ready) ---------------- */
+let D = null;
+const cur = () => ({ mode: S.mode, budget: S.budget, window: S.window, passes: S.passes, passLen: S.passLen });
+const LABELS = { mode: 'Mode', ...Object.fromEntries(Object.entries(FIELDS).map(([k, f]) => [k, f.label])) };
+const showVal = (k, v) => k === 'mode' ? MODE_FMT(v) : FIELDS[k].fmt(v);
+// "up" is the loosening direction for every lever
+const isLoose = (k, v) => k === 'mode' ? (S.mode === 'block' && v === 'sessions') : v > S[k];
+function changed(a, b) {
+  if (b.mode === 'block' && a.mode === 'sessions') return ['mode'];
+  return ['mode', 'budget', 'window', 'passes', 'passLen'].filter(k => a[k] !== b[k]);
+}
+const diffRows = (from, to) => changed(from, to).map(k =>
+  `<div class="row diff"><span>${LABELS[k]}</span><b>${showVal(k, from[k])} <span class="arrow">→</span> ${showVal(k, to[k])}</b></div>`).join('') || '<div class="row"><span>No changes</span></div>';
+
+function renderSettings(sc, bt) {
+  const head = '<div class="topbar"><button id="sback" aria-label="Back">←</button><h1>Settings</h1></div>';
+  const setBack = () => { $('sback').onclick = () => { S.view = 'main'; S.flash = ''; D = null; render(); }; };
+  const flash = S.flash ? `<div class="banner ok"><span style="font-size:20px">✓</span><div><b>${S.flash}</b></div></div>` : '';
+
+  if (S.phase === 'pending') {
+    sc.innerHTML = head + `<div class="banner wait"><span style="font-size:22px">⏳</span><div><b>Change pending · applies in 23h 41m</b>Your current limits stay in force until then.</div></div>
+      <div class="label">REQUESTED CHANGE</div><div class="lockcard" style="margin-top:0">${diffRows(cur(), S.pending.d)}</div>
+      <button class="mini" id="cancel">Cancel request</button>`;
+    bt.innerHTML = '';
+    setBack(); $('cancel').onclick = () => { S.pending = null; S.phase = 'unlocked'; S.flash = 'Request cancelled'; render(); };
+    return;
+  }
+  if (S.phase === 'ready') {
+    sc.innerHTML = head + `<div class="banner ok"><span style="font-size:22px">🔓</span><div><b>Ready to apply</b>The wait is over. Review the change, then hold to apply.</div></div>
+      <div class="label">BEFORE → AFTER</div><div class="lockcard" style="margin-top:0">${diffRows(cur(), S.pending.d)}</div>
+      <p class="warn">Applying starts a <b>new ${S.lockDays}-day lock</b>.</p>`;
+    bt.innerHTML = '<button class="btn ghost" id="cancel">Cancel</button>' + holdBtn('Hold to apply');
+    setBack(); $('cancel').onclick = () => { S.pending = null; S.phase = 'unlocked'; S.flash = 'Request cancelled'; render(); };
+    bindHold(() => { Object.assign(S, S.pending.d); S.pending = null; S.phase = 'locked'; S.lockedAt = Date.now(); S.flash = 'Applied. Locked again until ' + until(); render(); });
+    return;
+  }
+
+  if (!D) D = cur();
+  const locked = S.phase === 'locked';
+  const ch = changed(cur(), D);
+  const dirty = ch.length > 0;
+  const needsWait = ch.some(k => isLoose(k, D[k]));
+  const banner = locked
+    ? `<div class="banner"><span style="font-size:22px">🔒</span><div><b>Locked until ${until()}</b>The levers can't go up. You can still pull them down.</div></div>`
+    : `<div class="banner ok"><span style="font-size:22px">🔓</span><div><b>Lock ended ${until()}</b>Pulling down applies now. Pushing up takes a 24 h wait.</div></div>`;
+  let body = `<div class="label">MODE</div><div class="chips">
+    ${['sessions', 'block'].map(v => `<button class="chip ${D.mode === v ? 'sel' : ''}" data-mode="${v}" ${locked && isLoose('mode', v) ? 'disabled title="Locked until ' + until() + '"' : ''}>${MODE_FMT(v)}</button>`).join('')}</div>`;
+  if (D.mode === 'sessions') {
+    body += '<div class="label">LIMITS</div>' + ['budget', 'window', 'passes'].map(k => srow(k, D, locked)).join('') + (D.passes > 0 ? srow('passLen', D, locked) : '');
+  }
+  sc.innerHTML = head + flash + banner + body + '<div style="height:8px"></div>';
+  const label = needsWait ? 'Hold to request · 24 h wait' : locked ? 'Hold to apply (stricter)' : 'Hold to apply';
+  bt.innerHTML = dirty ? holdBtn(label) : '<button class="btn" disabled>No changes</button>';
+  setBack();
+  sc.querySelectorAll('[data-mode]').forEach(el => el.onclick = () => { D.mode = el.dataset.mode; S.flash = ''; render(); });
+  sc.querySelectorAll('[data-open]').forEach(el => el.onclick = () => openSheet(el.dataset.open, D, locked, v => { D[el.dataset.open] = v; S.flash = ''; render(); }));
+  if (dirty) bindHold(() => {
+    if (needsWait) { S.pending = { d: { ...D } }; S.phase = 'pending'; S.flash = ''; }
+    else { Object.assign(S, D); S.flash = locked ? 'Made stricter. Lock end date unchanged' : 'Applied'; }
+    D = null; render();
+  });
+}
+
+function jump(phase) {
+  Object.assign(S, { locked: true, view: 'settings', perm: true, phase, flash: '', mode: 'sessions', budget: 10, window: 60, passes: 3, passLen: 2, lockDays: 7 });
+  S.lockedAt = Date.now() - (phase === 'locked' ? 2 * 864e5 : (S.lockDays + 1) * 864e5);
+  S.pending = (phase === 'pending' || phase === 'ready') ? { d: { ...cur(), budget: 20, passes: 5 } } : null;
+  D = null; render();
+}
+document.querySelectorAll('[data-jump]').forEach(el => el.onclick = () => jump(el.dataset.jump));
+render();
+</script>
+</body>
+</html>

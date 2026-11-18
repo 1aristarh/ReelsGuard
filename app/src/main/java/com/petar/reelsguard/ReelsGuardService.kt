@@ -35,6 +35,7 @@ class ReelsGuardService : AccessibilityService() {
 
     /** Returns true while a Reels/Shorts surface is on screen and not blocked. */
     private fun check(): Boolean {
+        if (!Store.lock(this).approved) return false // the guard stays off until the setup is approved
         val root = rootInActiveWindow
         val surface = root?.let { onReels(it) }
         if (surface == null) {
