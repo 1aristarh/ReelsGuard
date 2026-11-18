@@ -1,0 +1,10 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <!-- timer ring with a gap, plus a play triangle -->
+    <path
+        android:pathData="M54,30 A24,24 0 1 1 30,54"
+        android:strokeColor="#FFFFFF" android:strokeWidth="6" android:strokeLineCap="round" />
+    <path android:fillColor="#E5252A" android:pathData="M47,43 L47,65 L66,54 Z" />
+</vector>
+
