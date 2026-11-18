@@ -28,6 +28,8 @@ class MainActivity : Activity() {
         const val GREY = 0xFFB0B0B0.toInt()
         const val MIN = 60_000L
         val BUDGETS = listOf(5, 10, 15, 20, 30).map { it * MIN }
+        val PASS_COUNTS = listOf(0L, 1L, 2L, 3L, 5L)
+        val PASS_LENGTHS = listOf(1, 2, 3, 5).map { it * MIN }
         val WINDOWS = listOf(30, 60, 120, 180).map { it * MIN }
     }
 
@@ -42,6 +44,8 @@ class MainActivity : Activity() {
     private lateinit var modeRow: TextView
     private lateinit var budgetRow: TextView
     private lateinit var windowRow: TextView
+    private lateinit var passesRow: TextView
+    private lateinit var passLenRow: TextView
     private val handler = Handler(Looper.getMainLooper())
     private val refresh = object : Runnable {
         override fun run() { render(); handler.postDelayed(this, 1000) }
@@ -106,11 +110,13 @@ class MainActivity : Activity() {
         modeRow = settingRow { t -> t.blockAll = !t.blockAll }
         budgetRow = settingRow { t -> t.budgetMs = nextOf(BUDGETS.filter { it < t.windowMs }, t.budgetMs) }
         windowRow = settingRow { t -> t.windowMs = nextOf(WINDOWS.filter { it > t.budgetMs }, t.windowMs) }
+        passesRow = settingRow { t -> t.maxPasses = nextOf(PASS_COUNTS, t.maxPasses.toLong()).toInt() }
+        passLenRow = settingRow { t -> t.passMs = nextOf(PASS_LENGTHS, t.passMs) }
         val settings = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = pill(CARD, 20)
             setPadding(dp(8), dp(4), dp(8), dp(4))
-            addView(modeRow); addView(budgetRow); addView(windowRow)
+            addView(modeRow); addView(budgetRow); addView(windowRow); addView(passesRow); addView(passLenRow)
         }
 
         val root = LinearLayout(this).apply {
@@ -167,9 +173,13 @@ class MainActivity : Activity() {
         modeRow.text = "Mode:  " + if (t.blockAll) "Block completely" else "Sessions"
         budgetRow.text = "Scrolling per session:  ${mins(t.budgetMs)}"
         windowRow.text = "Session length:  ${mins(t.windowMs)}"
+        passesRow.text = "\"I need to see something\" per day:  ${t.maxPasses}"
+        passLenRow.text = "Length of each:  ${mins(t.passMs)}"
+        passLenRow.visibility = if (t.maxPasses > 0 && !t.blockAll) View.VISIBLE else View.GONE
+        passesRow.visibility = if (t.blockAll) View.GONE else View.VISIBLE
         budgetRow.visibility = if (t.blockAll) View.GONE else View.VISIBLE
         windowRow.visibility = budgetRow.visibility
-        for (r in listOf(modeRow, budgetRow, windowRow)) r.alpha = if (locked) 0.4f else 1f
+        for (r in listOf(modeRow, budgetRow, windowRow, passesRow, passLenRow)) r.alpha = if (locked) 0.4f else 1f
         big.textSize = 48f
         when {
             t.blockAll -> {

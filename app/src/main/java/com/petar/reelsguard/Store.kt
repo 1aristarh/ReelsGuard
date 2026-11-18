@@ -22,6 +22,8 @@ object Store {
             cooldownMs = 0L, // cooldown lasts until the session window ends
             windowMs = p.getLong("windowMs", BuildConfig.WINDOW_MS),
             blockAll = p.getBoolean("blockAll", false),
+            maxPasses = p.getInt("maxPasses", CooldownTimer.MAX_PASSES),
+            passMs = p.getLong("passMs", CooldownTimer.PASS_MS),
             usedMs = p.getLong("used", 0L), cooldownUntil = p.getLong("until", 0L),
             passUntil = p.getLong("passUntil", 0L), passDay = p.getLong("passDay", -1L),
             passesUsed = p.getInt("passesUsed", 0),
@@ -38,6 +40,7 @@ object Store {
             .putLong("totalMs", t.totalMs).putLong("totalDay", t.totalDay)
             .putLong("windowStart", t.windowStart)
             .putLong("budgetMs", t.budgetMs).putLong("windowMs", t.windowMs)
-            .putBoolean("blockAll", t.blockAll).apply()
+            .putBoolean("blockAll", t.blockAll)
+            .putInt("maxPasses", t.maxPasses).putLong("passMs", t.passMs).apply()
     }
 }

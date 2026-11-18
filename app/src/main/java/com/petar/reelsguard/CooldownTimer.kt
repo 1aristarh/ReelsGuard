@@ -17,8 +17,8 @@ class CooldownTimer(
     var totalDay: Long = -1L,
     var windowStart: Long = -1L,
     var windowMs: Long = WINDOW_MS,
-    val passMs: Long = PASS_MS,
-    private val maxPasses: Int = MAX_PASSES,
+    var passMs: Long = PASS_MS,
+    var maxPasses: Int = MAX_PASSES,
     /** No sessions: Reels/Shorts are blocked outright. */
     var blockAll: Boolean = false,
 ) {
@@ -83,7 +83,7 @@ class CooldownTimer(
 
     fun passLeftMs(now: Long) = (passUntil - now).coerceAtLeast(0L)
 
-    fun passesLeft(now: Long) = if (dayOf(now) != passDay) maxPasses else maxPasses - passesUsed
+    fun passesLeft(now: Long) = if (dayOf(now) != passDay) maxPasses else (maxPasses - passesUsed).coerceAtLeast(0)
 
     /** Starts a short pass during a cooldown, if any are left today. */
     fun grantPass(now: Long): Boolean {
