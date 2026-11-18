@@ -18,7 +18,10 @@ object Store {
     private fun load(c: Context): CooldownTimer {
         val p = c.getSharedPreferences(P, Context.MODE_PRIVATE)
         return CooldownTimer(
-            BuildConfig.BUDGET_MS, BuildConfig.COOLDOWN_MS,
+            budgetMs = p.getLong("budgetMs", BuildConfig.BUDGET_MS),
+            cooldownMs = 0L, // cooldown lasts until the session window ends
+            windowMs = p.getLong("windowMs", BuildConfig.WINDOW_MS),
+            blockAll = p.getBoolean("blockAll", false),
             usedMs = p.getLong("used", 0L), cooldownUntil = p.getLong("until", 0L),
             passUntil = p.getLong("passUntil", 0L), passDay = p.getLong("passDay", -1L),
             passesUsed = p.getInt("passesUsed", 0),
@@ -33,6 +36,8 @@ object Store {
             .putLong("passUntil", t.passUntil).putLong("passDay", t.passDay)
             .putInt("passesUsed", t.passesUsed)
             .putLong("totalMs", t.totalMs).putLong("totalDay", t.totalDay)
-            .putLong("windowStart", t.windowStart).apply()
+            .putLong("windowStart", t.windowStart)
+            .putLong("budgetMs", t.budgetMs).putLong("windowMs", t.windowMs)
+            .putBoolean("blockAll", t.blockAll).apply()
     }
 }

@@ -92,4 +92,27 @@ class CooldownTimerTest {
         assertEquals(30_000L, x.cooldownLeftMs(now))
         assertFalse(x.onReelsVisible(now + 30_001L))
     }
+
+    @Test fun blockAllBlocksImmediatelyAndGivesNoPass() {
+        val x = CooldownTimer(10_000, 30_000, blockAll = true)
+        assertTrue(x.onReelsVisible(1_000))
+        assertTrue(x.isBlocked(1_000))
+        assertFalse(x.inCooldown(1_000))
+        assertFalse(x.grantPass(1_000))
+        x.blockAll = false
+        assertFalse(x.onReelsVisible(2_000))
+    }
+
+    @Test fun cooldownLastsUntilSessionWindowEnds() {
+        val x = CooldownTimer(10_000, 0L, maxGapMs = 2_000, windowMs = 60_000)
+        val t0 = 1_700_000_000_000L
+        var now = t0
+        x.onReelsVisible(now)
+        repeat(9) { now += 1_000; x.onReelsVisible(now) }
+        now += 1_000
+        assertTrue(x.onReelsVisible(now))
+        assertEquals(t0 + 60_000L, x.cooldownUntil)
+        assertTrue(x.onReelsVisible(t0 + 59_000L))
+        assertFalse(x.onReelsVisible(t0 + 60_001L))
+    }
 }

@@ -1,10 +1,12 @@
 package com.petar.reelsguard
 
 import android.accessibilityservice.AccessibilityService
-import android.content.Intent
+import android.accessibilityservice.GestureDescription
+import android.graphics.Path
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import android.widget.Toast
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 
@@ -13,6 +15,8 @@ class ReelsGuardService : AccessibilityService() {
     private val timer by lazy { Store.get(this) }
     private val handler = Handler(Looper.getMainLooper())
     private var ticking = false
+    private var lastExitAt = 0L
+    private var exitStep = 0
 
     private val tick = object : Runnable {
         override fun run() {
@@ -35,6 +39,7 @@ class ReelsGuardService : AccessibilityService() {
         val surface = root?.let { onReels(it) }
         if (surface == null) {
             timer.onLeftReels()
+            exitStep = 0
             return false
         }
         val now = System.currentTimeMillis()
@@ -42,15 +47,47 @@ class ReelsGuardService : AccessibilityService() {
         val blocked = timer.onReelsVisible(now)
         Store.save(this, timer)
         if (blocked) {
-            performGlobalAction(GLOBAL_ACTION_HOME)
-            try {
-                startActivity(Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-            } catch (_: Exception) {
-            }
+            exitReels(root.packageName?.toString().orEmpty(), now)
             return false
         }
         return true
     }
+
+    /**
+     * Gets the user out of Reels with the gentlest move that works for the app, escalating
+     * (swipe -> back -> home) if the previous attempt left them on Reels. Only runs while a
+     * Reels/Shorts surface is actually on screen, so the rest of the app is left alone.
+     */
+    private fun exitReels(pkg: String, now: Long) {
+        if (now - lastExitAt < EXIT_GAP_MS) return // the last attempt is still animating
+        lastExitAt = now
+        val plan = EXIT_PLANS[pkg] ?: listOf(Exit.HOME)
+        val step = plan[minOf(exitStep, plan.size - 1)]
+        if (exitStep == 0) {
+            val msg = if (timer.blockAll) "Reels are blocked" else "Reels time is up"
+            Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+        }
+        exitStep++
+        when (step) {
+            Exit.SWIPE_LEFT -> swipe(left = true)
+            Exit.SWIPE_RIGHT -> swipe(left = false)
+            Exit.BACK -> performGlobalAction(GLOBAL_ACTION_BACK)
+            Exit.HOME -> performGlobalAction(GLOBAL_ACTION_HOME)
+        }
+    }
+
+    private fun swipe(left: Boolean) {
+        val m = resources.displayMetrics
+        val y = m.heightPixels * 0.5f
+        val from = m.widthPixels * (if (left) 0.85f else 0.15f)
+        val to = m.widthPixels * (if (left) 0.15f else 0.85f)
+        val path = Path().apply { moveTo(from, y); lineTo(to, y) }
+        val g = GestureDescription.Builder()
+            .addStroke(GestureDescription.StrokeDescription(path, 0, 250)).build()
+        dispatchGesture(g, null, null)
+    }
+
+    private enum class Exit { SWIPE_LEFT, SWIPE_RIGHT, BACK, HOME }
 
     /** Returns the matched surface's name (for display), or null if this isn't Reels/Shorts. */
     private fun onReels(root: AccessibilityNodeInfo): String? {
@@ -89,6 +126,16 @@ class ReelsGuardService : AccessibilityService() {
 
     companion object {
         private const val TICK_MS = 5_000L
+        private const val EXIT_GAP_MS = 1_500L
+        // How to leave Reels per app, tried in order (the last step repeats). Update if an app changes.
+        // Instagram: swiping left leaves the Reels tab but stays in the app. TikTok has no non-Reels
+        // surface to go back to, and YouTube Shorts exits with Back, so those fall back accordingly.
+        private val EXIT_PLANS = mapOf(
+            "com.instagram.android" to listOf(Exit.SWIPE_LEFT, Exit.BACK, Exit.HOME),
+            "com.google.android.youtube" to listOf(Exit.BACK, Exit.HOME),
+            "com.zhiliaoapp.musically" to listOf(Exit.HOME),
+            "com.ss.android.ugc.trill" to listOf(Exit.HOME),
+        )
         private val TIKTOK = setOf("com.zhiliaoapp.musically", "com.ss.android.ugc.trill")
         private val TAB_LABELS = setOf("Shorts", "Reels")
         private val APP_NAMES = mapOf(

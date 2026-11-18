@@ -4,8 +4,9 @@ import java.util.TimeZone
 
 /** Pure timer logic: no Android dependencies, so it is unit-testable. */
 class CooldownTimer(
-    val budgetMs: Long,
-    val cooldownMs: Long,
+    var budgetMs: Long,
+    /** Cooldown length after the budget is used up; 0 or less = until the current session window ends. */
+    var cooldownMs: Long,
     private val maxGapMs: Long = 10_000L,
     var usedMs: Long = 0L,
     var cooldownUntil: Long = 0L,
@@ -15,14 +16,17 @@ class CooldownTimer(
     var totalMs: Long = 0L,
     var totalDay: Long = -1L,
     var windowStart: Long = -1L,
-    private val windowMs: Long = WINDOW_MS,
+    var windowMs: Long = WINDOW_MS,
     val passMs: Long = PASS_MS,
     private val maxPasses: Int = MAX_PASSES,
+    /** No sessions: Reels/Shorts are blocked outright. */
+    var blockAll: Boolean = false,
 ) {
     private var last = -1L
 
     /** Call while the Reels/Shorts surface is visible. Returns true if it must be blocked now. */
     fun onReelsVisible(now: Long): Boolean {
+        if (blockAll) { last = -1L; return true }
         var delta = if (last >= 0L && now - last in 0..maxGapMs) now - last else 0L
         if (cooldownUntil > 0L) {
             if (now < cooldownUntil) {
@@ -38,7 +42,7 @@ class CooldownTimer(
         addToday(now, delta)
         last = now
         if (usedMs >= budgetMs) {
-            cooldownUntil = now + cooldownMs
+            cooldownUntil = if (cooldownMs > 0L) now + cooldownMs else maxOf(windowStart + windowMs, now + MIN_COOLDOWN_MS)
             usedMs = 0L; windowStart = -1L; last = -1L
             return true
         }
@@ -56,7 +60,13 @@ class CooldownTimer(
 
     fun onLeftReels() { last = -1L }
 
-    fun isBlocked(now: Long) = cooldownUntil > now
+    /** True while a session cooldown is running (settings are locked then). */
+    fun inCooldown(now: Long) = cooldownUntil > now
+
+    fun isBlocked(now: Long) = blockAll || cooldownUntil > now
+
+    /** Full length of a cooldown, for progress display. */
+    fun cooldownSpanMs() = if (cooldownMs > 0L) cooldownMs else windowMs
 
     fun cooldownLeftMs(now: Long) = (cooldownUntil - now).coerceAtLeast(0L)
 
@@ -77,7 +87,7 @@ class CooldownTimer(
 
     /** Starts a short pass during a cooldown, if any are left today. */
     fun grantPass(now: Long): Boolean {
-        if (!isBlocked(now) || passActive(now) || passesLeft(now) <= 0) return false
+        if (blockAll || !isBlocked(now) || passActive(now) || passesLeft(now) <= 0) return false
         val day = dayOf(now)
         if (day != passDay) { passDay = day; passesUsed = 0 }
         passesUsed++
@@ -89,6 +99,7 @@ class CooldownTimer(
 
     companion object {
         const val WINDOW_MS = 3_600_000L
+        const val MIN_COOLDOWN_MS = 1_000L
         const val PASS_MS = 120_000L
         const val MAX_PASSES = 3
     }

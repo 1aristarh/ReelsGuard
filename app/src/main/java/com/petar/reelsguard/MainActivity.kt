@@ -15,6 +15,7 @@ import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import android.widget.FrameLayout
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 
 class MainActivity : Activity() {
@@ -25,6 +26,9 @@ class MainActivity : Activity() {
         const val WHITE = 0xFFFFFFFF.toInt()
         const val RED = 0xFFE5252A.toInt()
         const val GREY = 0xFFB0B0B0.toInt()
+        const val MIN = 60_000L
+        val BUDGETS = listOf(5, 10, 15, 20, 30).map { it * MIN }
+        val WINDOWS = listOf(30, 60, 120, 180).map { it * MIN }
     }
 
     private lateinit var ring: RingView
@@ -35,6 +39,9 @@ class MainActivity : Activity() {
     private lateinit var today: TextView
     private lateinit var peek: TextView
     private lateinit var guard: TextView
+    private lateinit var modeRow: TextView
+    private lateinit var budgetRow: TextView
+    private lateinit var windowRow: TextView
     private val handler = Handler(Looper.getMainLooper())
     private val refresh = object : Runnable {
         override fun run() { render(); handler.postDelayed(this, 1000) }
@@ -95,6 +102,17 @@ class MainActivity : Activity() {
             setOnClickListener { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
         }
 
+        // Settings: tap a row to change it. Locked while a session cooldown is running.
+        modeRow = settingRow { t -> t.blockAll = !t.blockAll }
+        budgetRow = settingRow { t -> t.budgetMs = nextOf(BUDGETS.filter { it < t.windowMs }, t.budgetMs) }
+        windowRow = settingRow { t -> t.windowMs = nextOf(WINDOWS.filter { it > t.budgetMs }, t.windowMs) }
+        val settings = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = pill(CARD, 20)
+            setPadding(dp(8), dp(4), dp(8), dp(4))
+            addView(modeRow); addView(budgetRow); addView(windowRow)
+        }
+
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
@@ -106,11 +124,32 @@ class MainActivity : Activity() {
             addView(ringBox, LinearLayout.LayoutParams(dp(270), dp(270)))
             addView(View(context), LinearLayout.LayoutParams(0, 0, 1f))
             addView(card, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+            addView(settings, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(12) })
             addView(peek, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(16) })
             addView(guard, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { topMargin = dp(8) })
         }
-        setContentView(root)
+        setContentView(ScrollView(this).apply {
+            isFillViewport = true; setBackgroundColor(BG); addView(root)
+        })
     }
+
+    private fun settingRow(change: (CooldownTimer) -> Unit) = TextView(this).apply {
+        textSize = 15f; setTextColor(Color.WHITE)
+        setPadding(dp(14), dp(14), dp(14), dp(14))
+        setOnClickListener {
+            val t = Store.get(this@MainActivity)
+            if (t.inCooldown(System.currentTimeMillis())) return@setOnClickListener
+            change(t)
+            Store.save(this@MainActivity, t)
+            render()
+        }
+    }
+
+    /** Next value in [options] after [cur], wrapping around; the first option if [cur] isn't in it. */
+    private fun nextOf(options: List<Long>, cur: Long): Long =
+        if (options.isEmpty()) cur else options[(options.indexOf(cur) + 1) % options.size]
+
+    private fun mins(ms: Long) = if (ms % 3_600_000L == 0L) "${ms / 3_600_000L} h" else "${ms / MIN} min"
 
     override fun onResume() { super.onResume(); refresh.run() }
     override fun onPause() { super.onPause(); handler.removeCallbacks(refresh) }
@@ -124,7 +163,21 @@ class MainActivity : Activity() {
         else "Last detected: $hit · ${(now - Store.lastHitAt) / 1000}s ago"
         val resetIn = t.windowLeftMs(now)
         resets.text = if (resetIn > 0 && !t.isBlocked(now)) "Resets in ${fmt(resetIn)}" else ""
+        val locked = t.inCooldown(now)
+        modeRow.text = "Mode:  " + if (t.blockAll) "Block completely" else "Sessions"
+        budgetRow.text = "Scrolling per session:  ${mins(t.budgetMs)}"
+        windowRow.text = "Session length:  ${mins(t.windowMs)}"
+        budgetRow.visibility = if (t.blockAll) View.GONE else View.VISIBLE
+        windowRow.visibility = budgetRow.visibility
+        for (r in listOf(modeRow, budgetRow, windowRow)) r.alpha = if (locked) 0.4f else 1f
+        big.textSize = 48f
         when {
+            t.blockAll -> {
+                big.textSize = 34f
+                big.text = "BLOCKED"; label.text = "REELS OFF"
+                ring.set(1f, RED)
+                peek.visibility = View.GONE
+            }
             t.passActive(now) -> {
                 big.text = fmt(t.passLeftMs(now)); label.text = "PASS ACTIVE"
                 ring.set(t.passLeftMs(now).toFloat() / t.passMs, GREY)
@@ -132,7 +185,7 @@ class MainActivity : Activity() {
             }
             t.isBlocked(now) -> {
                 big.text = fmt(t.cooldownLeftMs(now)); label.text = "COOLDOWN"
-                ring.set(t.cooldownLeftMs(now).toFloat() / t.cooldownMs, RED)
+                ring.set(t.cooldownLeftMs(now).toFloat() / t.cooldownSpanMs(), RED)
                 val left = t.passesLeft(now)
                 peek.visibility = View.VISIBLE
                 peek.text = "I need to see something  ·  $left left"

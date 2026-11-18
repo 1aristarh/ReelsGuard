@@ -1,3 +1,3 @@
 <resources>
-    <string name="service_desc">Limits Reels, Shorts and TikTok to 10 minutes, then a 30 minute cooldown.</string>
+    <string name="service_desc">Limits Reels, Shorts and TikTok to a scrolling budget per session (default 10 minutes per hour), or blocks them completely. When time is up it swipes or goes back out of Reels, which needs gesture permission.</string>
 </resources>
